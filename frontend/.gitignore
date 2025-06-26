@@ -3,6 +3,7 @@
 # dependencies
 /node_modules
 /.pnp
+/lib
 .pnp.*
 .yarn/*
 !.yarn/patches
@@ -16,7 +17,6 @@
 # next.js
 /.next/
 /out/
-
 # production
 /build
 
