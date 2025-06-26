@@ -18,6 +18,17 @@ const Page = () => {
       console.log("User created successfully");
       const res = await signInWithEmailAndPassword(auth, email, password);
       const token = await res.user.getIdToken();
+
+      //verifying token from backend for safe and secure authentication system
+      const tokenResponse = await fetch("http://localhost:8080/",{
+        method:"GET",
+        headers:{
+          "Authorization":`Bearer ${token}`,
+          "Content-type":"application/json"
+        }
+      })
+      const data = await tokenResponse.text()
+      console.log(data)
       console.log("Token:", token);
       setMsg("Login successful!");
     } catch (err: any) {
