@@ -1,11 +1,16 @@
 "use client";
+import React, { useState, useRef, useEffect } from "react";
 
-import React, { useState } from "react";
+interface Message {
+  sender: "user" | "bot";
+  text: string;
+}
 
 const ChatInterface = () => {
   const [msg, setMsg] = useState("");
-  const [response, setResponse] = useState("");
+  const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(false);
+  const bottomRef = useRef<HTMLDivElement>(null);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setMsg(e.target.value);
@@ -14,58 +19,82 @@ const ChatInterface = () => {
   const handleSubmit = async () => {
     if (!msg.trim()) return;
 
+    const newMsg: Message = { sender: "user", text: msg };
+    setMessages((prev) => [...prev, newMsg]);
+    setMsg("");
     setLoading(true);
-    setResponse("");
 
     try {
-      const res = await fetch("/api/groq-chat", {
+      const res = await fetch("/api/chat", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ message: msg }),
+        body: JSON.stringify({ message: newMsg.text }),
       });
 
       const data = await res.json();
-      setResponse(data.reply || "No response from model.");
+      const botReply: Message = {
+        sender: "bot",
+        text: data.reply || "No response from model.",
+      };
+
+      setMessages((prev) => [...prev, botReply]);
     } catch (error) {
       console.error("Error calling Groq API:", error);
-      setResponse("Something went wrong.");
+      setMessages((prev) => [
+        ...prev,
+        { sender: "bot", text: "Something went wrong." },
+      ]);
     } finally {
       setLoading(false);
     }
   };
 
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
   return (
-    <div className="w-full p-4 space-y-4">
-      <div>
-        <h1 className="text-xl font-bold text-white">Welcome to Insight Analyst</h1>
-        <p className="text-gray-300">How can we help you today?</p>
+    <div className="flex flex-col h-screen bg-black text-white">
+      <div className="p-4 border-b border-gray-700">
+        <h1 className="text-2xl font-bold">Insight Analyst</h1>
+        <p className="text-gray-400">How can we help you today?</p>
+      </div>
+      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+        {messages.map((m, i) => (
+          <div
+            key={i}
+            className={`max-w-lg px-4 py-2 rounded-2xl ${
+              m.sender === "user"
+                ? "ml-auto bg-blue-600"
+                : "mr-auto bg-gray-700"
+            }`}
+          >
+            {m.text}
+          </div>
+        ))}
+        <div ref={bottomRef} />
       </div>
 
-      <div className="flex">
-        <textarea
-          value={msg}
-          onChange={handleInputChange}
-          rows={1}
-          className="w-full p-2 rounded-2xl bg-slate-700 text-white"
-          placeholder="Type your message here..."
-        />
-        <button
-          onClick={handleSubmit}
-          disabled={loading}
-          className=" bg-blue-600 rounded-lg text-white"
-        >
-          {loading ? "Thinking..." : "Send"}
-        </button>
-      </div>
-
-      {response && (
-        <div className="p-4 bg-gray-800 text-white rounded-xl">
-          <strong>Insight Analyst:</strong>
-          <p>{response}</p>
+      <div className="p-4 bg-black border-t border-gray-700">
+        <div className="flex items-center space-x-2">
+          <textarea
+            value={msg}
+            onChange={handleInputChange}
+            rows={1}
+            className="flex-1 resize-none p-2 rounded-xl bg-gray-700 text-white focus:outline-none"
+            placeholder="Type your message..."
+          />
+          <button
+            onClick={handleSubmit}
+            disabled={loading}
+            className="bg-blue-600 px-4 py-2 rounded-xl hover:bg-blue-700 transition"
+          >
+            {loading ? "..." : "Send"}
+          </button>
         </div>
-      )}
+      </div>
     </div>
   );
 };
